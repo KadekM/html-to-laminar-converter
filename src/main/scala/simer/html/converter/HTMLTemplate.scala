@@ -5,7 +5,6 @@ import org.scalajs.dom.html.Input
 
 import com.raquo.laminar.api.L._
 
-
 object HTMLTemplate {
 
   def isNewLineAttributes = !dom.document.getElementById("newlineAttributes").asInstanceOf[Input].checked
@@ -19,18 +18,28 @@ object HTMLTemplate {
         li(
           a(href := "#", "HTML TO LAMINARTAGS CONVERTER")
         ),
+        li(float := "center",
+          u(
+            a(href := "https://simerplaha.github.io/html-to-scalatags-converter/", target := "_blank", "Fork of Simer's work")
+          )
+        ),
+        li(float := "right",
+          u(
+            a(href := "https://github.com/KadekM/html-to-laminar-converter", target := "_blank", "Report an issue")
+          )
+        )
       ),
       table(width := "100%",
         tr(width := "100%",
           th(width := "50%", h4("HTML")),
-          th(width := "50%", h4("Scalatags")
+          th(width := "50%", h4("LaminarTags")
           )
         ),
         tr(width := "100%",
           td(width := "50%",
-            textArea(idAttr := "htmlCode", cls := "boxsizingBorder", width := "100%", rows := 26, placeholder := "Enter your HTML code here.",
-                inContext { thisNode => onInput.map(_ => thisNode.ref.value) --> signal },
-                inContext { thisNode => onFocus.map(_ => thisNode.ref.value) --> signal },
+            textArea(idAttr := "htmlCode", cls := "boxsizingBorder", width := "100%", rows := 32, placeholder := "Enter your HTML code here.",
+              inContext { thisNode => onInput.map(_ => thisNode.ref.value) --> signal },
+              inContext { thisNode => onFocus.map(_ => thisNode.ref.value) --> signal },
               """<div class="myClass">
                 |    <div class="someClass" data-attribute="someValue">
                 |        <button type="button" class="btn btn-default">Button</button>
@@ -57,7 +66,11 @@ object HTMLTemplate {
             )
           ),
           td(width := "50%",
-            textArea(idAttr := "scalaTagsCode", cls := "boxsizingBorder", width := "100%", rows := 26, placeholder := "Scala code will be generated here.", value <-- signal.signal.map(converter))
+            textArea(cls := "boxsizingBorder", width := "100%", rows := 32, placeholder := "Scala code will be generated here.", value <-- signal.signal.map(converter))
+          )
+        ),
+        tr(width := "100%",
+          td(colSpan := 2, textAlign := "center", paddingTop := "5px",
           )
         )
       )

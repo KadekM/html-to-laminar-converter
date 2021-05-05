@@ -13,10 +13,9 @@ import scala.util.Random
 import com.raquo.laminar.api.L._
 
 
-
 import scala.scalajs.js
 
-object HtmlToTagsConverter  {
+object HtmlToTagsConverter {
 
   def main(args: Array[String]): Unit = {
     val template = HTMLTemplate.template
@@ -53,15 +52,15 @@ object HtmlToTagsConverter  {
     *
     * Filters out comments and empty text's nodes (garbage nodes :D) from the input HTML before converting to Scala.
     */
-  def toScalaTags(node: Node, converterType: ConverterType): String = {
+  def toScalaTags(node: Node, converterType: ConverterType, nestingLevel: Int = 0): String = {
     //removes all comment and empty text nodes.
     val childrenWithoutGarbageNodes: Seq[Node] = removeGarbageChildNodes(node)
 
     val children = childrenWithoutGarbageNodes
-      .map(toScalaTags(_, converterType))
+      .map(toScalaTags(_, converterType, nestingLevel + 1))
       .mkString(",\n")
 
-    toScalaTag(node, converterType, childrenWithoutGarbageNodes, children)
+    toScalaTag(node, converterType, childrenWithoutGarbageNodes, children, nestingLevel)
   }
 
   /**
@@ -70,16 +69,22 @@ object HtmlToTagsConverter  {
   private def toScalaTag(node: Node,
                          converterType: ConverterType,
                          childrenWithoutGarbageNodes: Seq[Node],
-                         children: String): String = {
+                         children: String,
+                         nestingLevel: Int): String = {
 
-    val scalaAttrList = toScalaAttributes(attributes = node.attributes, converterType)
+    val scalaAttrList = toScalaAttributes(attributes = node.attributes, converterType, nestingLevel+1)
 
-    node.nodeName match {
+    val name = converterType.tagsRenames.get(node.nodeName.toLowerCase) match {
+      case Some(value) => value
+      case None => node.nodeName.toLowerCase
+    }
+
+    name match {
       case "#text" =>
         tripleQuote(node.nodeValue)
 
       case _ if scalaAttrList.isEmpty && children.isEmpty =>
-        s"${converterType.nodePrefix + node.nodeName.toLowerCase}"
+        s"${pad(nestingLevel)}${converterType.nodePrefix + name}()"
 
       case _ =>
         val scalaAttrString =
@@ -90,7 +95,7 @@ object HtmlToTagsConverter  {
           else
             scalaAttrList.mkString(", ")
 
-        s"${converterType.nodePrefix + node.nodeName.toLowerCase}($scalaAttrString${
+        val data =
           if (children.isEmpty)
             ""
           else {
@@ -99,49 +104,52 @@ object HtmlToTagsConverter  {
             val commaMayBe = if (scalaAttrString.isEmpty) "" else ","
             val startNewLineMayBe = if (isChildNodeATextNode && (converterType.newLineAttributes || scalaAttrString.isEmpty)) "" else "\n"
             //add a newLine at the end if this node has more then one child nodes
-            val endNewLineMayBe = if (isChildNodeATextNode && childrenWithoutGarbageNodes.size <= 1) "" else "\n"
+            val endNewLineMayBe = if (isChildNodeATextNode && childrenWithoutGarbageNodes.size <= 1) "" else ""
             s"$commaMayBe$startNewLineMayBe$children$endNewLineMayBe"
           }
-        })"
+
+        s"${pad(nestingLevel)}${converterType.nodePrefix + name}($scalaAttrString$data)"
 
     }
   }
 
-  /**
-    * Converts HTML node attributes to Scalatags attributes
-    */
+  private def pad(level: Int) = List.fill(level * 2)(" ").mkString("")
+
   def toScalaAttributes(attributes: NamedNodeMap,
-                        converterType: ConverterType): Iterable[String] =
+                        converterType: ConverterType,
+                        nestingLevel: Int): Iterable[String] =
     if (js.isUndefined(attributes) || attributes.isEmpty)
       List.empty
     else
-      attributes.map {
+      attributes.flatMap {
         case (attrKey, attrValue) =>
           val attrValueString = attrValue.value
           val escapedValue = tripleQuote(attrValueString)
-          attrKey match {
-            case "class" =>
-              s"${converterType.attributePrefix + converterType.classAttributeKey + " := " + escapedValue}"
-
+          val attrs = attrKey match {
             case "style" =>
               val attributeKeyAndValue = attrValueString.split(";")
-              val dictionaryStrings = attributeKeyAndValue.map {
+              attributeKeyAndValue.map {
                 string =>
                   val styleKeyValue = string.split(":")
-                  s""""${styleKeyValue.head.trim}" -> "${styleKeyValue.last.trim}""""
-              }.mkString(", ")
+                  s"""customStyle("${styleKeyValue.head.trim}") := "${styleKeyValue.last.trim}""""
+              }.toList
 
-              s"""${converterType.attributePrefix + attrKey} := js.Dictionary($dictionaryStrings)"""
+            case x if x.startsWith("data-") =>
+              val after = x.stripPrefix("data-")
+              List(s"""dataAttr("$after") <-- ???""")
 
-            case "for" | "type" =>
-              s"${converterType.attributePrefix}`$attrKey` := $escapedValue"
+            case x if converterType.attrRenames.contains(x) =>
+              val key = converterType.attrRenames(x)
+              List(s"""$key := "$attrValueString"""")
 
-            case _ if !attrKey.matches("[a-zA-Z0-9]*$") =>
-              s"""${converterType.customAttributePostfix}("$attrKey") := $escapedValue"""
+            case x if x.startsWith("on") => // events
+              val capitalized = x.stripPrefix("on").capitalize
+              List(s"on$capitalized --> ???")
 
             case _ =>
-              s"${converterType.attributePrefix}$attrKey := $escapedValue"
+              List(s"${converterType.attributePrefix}$attrKey := $escapedValue")
           }
+          attrs.map(x => s"${pad(nestingLevel)}$x")
       }
 
   /**
