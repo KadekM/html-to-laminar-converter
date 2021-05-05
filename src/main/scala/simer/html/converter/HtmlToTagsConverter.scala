@@ -5,20 +5,30 @@ import org.scalajs.dom.ext._
 import org.scalajs.dom.html.TextArea
 import org.scalajs.dom.raw.{DOMParser, NamedNodeMap, Node}
 
+import com.raquo.laminar.api.L._
+import org.scalajs.dom.{document, window}
+
+import scala.scalajs.js.timers.setTimeout
+import scala.util.Random
+import com.raquo.laminar.api.L._
+
+
+
 import scala.scalajs.js
-import scala.scalajs.js.JSApp
 
-object HtmlToScalaTagsConverter extends JSApp {
+object HtmlToTagsConverter  {
 
-  def main(): Unit = {
-    val template = HTMLTemplate.template(runConverter)
-    dom.document.getElementById("content").appendChild(template.render)
+  def main(args: Array[String]): Unit = {
+    val template = HTMLTemplate.template
+
+    documentEvents.onDomContentLoaded.foreach { _ =>
+      val el = dom.document.getElementById("content")
+      render(el, template)
+    }(unsafeWindowOwner)
   }
 
-  def runConverter(converterType: ConverterType): Unit = {
-    val htmlCode = dom.document.getElementById("htmlCode").asInstanceOf[TextArea].value
+  def runConverter(converterType: ConverterType): String => String = { (htmlCode: String) =>
     val parsedHtml = new DOMParser().parseFromString(htmlCode, "text/html")
-    val scalaCodeTextArea = dom.document.getElementById("scalaTagsCode").asInstanceOf[TextArea]
     val rootChildNodes = removeGarbageChildNodes(parsedHtml)
     //having more then one HTML tree causes the DOMParser to generate an incorrect tree.
     val scalaCodes = rootChildNodes.map(toScalaTags(_, converterType))
@@ -29,12 +39,11 @@ object HtmlToScalaTagsConverter extends JSApp {
       } else
         scalaCodes.mkString(", ")
 
-    val scalaCodeWithoutParserAddedTags = removeTagsFromScalaCode(htmlCode, scalaCode, "html", "head", "body")
-    scalaCodeTextArea.value = scalaCodeWithoutParserAddedTags.trim
+    removeTagsFromScalaCode(htmlCode, scalaCode, "html", "head", "body")
   }
 
-  def removeGarbageChildNodes(node: Node): Seq[Node] =
-    node.childNodes.filterNot(isGarbageNode)
+  def removeGarbageChildNodes(node: Node): List[Node] =
+    node.childNodes.filterNot(isGarbageNode).toList
 
   def isGarbageNode(node: Node): Boolean =
     js.isUndefined(node) || node.nodeName == "#comment" || (node.nodeName == "#text" && node.nodeValue.trim.isEmpty)

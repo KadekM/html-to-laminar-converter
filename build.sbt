@@ -1,15 +1,13 @@
 enablePlugins(ScalaJSPlugin)
-enablePlugins(WorkbenchPlugin)
 
-name := "HtmlToScalaTagsConverter"
+name := "HtmlToLaminarTagsConverter"
 
 version := "1.0.0"
 
-scalaVersion := "2.12.2"
+scalaVersion := "2.13.5"
 
 scalaJSUseMainModuleInitializer := true
 
 libraryDependencies ++= Seq(
-  "org.scala-js" %%% "scalajs-dom" % "0.9.1",
-  "com.lihaoyi" %%% "scalatags" % "0.6.7"
+  "com.raquo" %%% "laminar" % "0.13.0"
 )

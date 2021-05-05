@@ -3,36 +3,34 @@ package simer.html.converter
 import org.scalajs.dom
 import org.scalajs.dom.html.Input
 
-import scalatags.JsDom.all._
+import com.raquo.laminar.api.L._
+
 
 object HTMLTemplate {
 
   def isNewLineAttributes = !dom.document.getElementById("newlineAttributes").asInstanceOf[Input].checked
 
-  def template(onConvertClicked: ConverterType => Unit) =
+  val signal = Var(initial = "nothing")
+  val converter = HtmlToTagsConverter.runConverter(LaminarTagsConverter)
+
+  def template = {
     div(
       ul(
         li(
-          a(href := "#")("HTML TO SCALATAGS CONVERTER")
+          a(href := "#", "HTML TO LAMINARTAGS CONVERTER")
         ),
-        li(float := "right",
-          u(
-            a(href := "https://github.com/simerplaha/html-to-scalatags-converter/issues", target := "blank")("Report an issue")
-          )
-        )
       ),
-      table(width := "100%")(
-        tr(width := "100%")(
-          th(width := "50%")(
-            h4("HTML")
-          ),
-          th(width := "50%")(
-            h4("Scalatags")
+      table(width := "100%",
+        tr(width := "100%",
+          th(width := "50%", h4("HTML")),
+          th(width := "50%", h4("Scalatags")
           )
         ),
-        tr(width := "100%")(
-          td(width := "50%")(
-            textarea(id := "htmlCode", cls := "boxsizingBorder", width := "100%", rows := 26, placeholder := "Enter your HTML code here.")(
+        tr(width := "100%",
+          td(width := "50%",
+            textArea(idAttr := "htmlCode", cls := "boxsizingBorder", width := "100%", rows := 26, placeholder := "Enter your HTML code here.",
+                inContext { thisNode => onInput.map(_ => thisNode.ref.value) --> signal },
+                inContext { thisNode => onFocus.map(_ => thisNode.ref.value) --> signal },
               """<div class="myClass">
                 |    <div class="someClass" data-attribute="someValue">
                 |        <button type="button" class="btn btn-default">Button</button>
@@ -58,28 +56,11 @@ object HTMLTemplate {
                 |</div>""".stripMargin
             )
           ),
-          td(width := "50%")(
-            textarea(id := "scalaTagsCode", cls := "boxsizingBorder", width := "100%", rows := 26, placeholder := "Scala code will be generated here.")
-          )
-        ),
-        tr(width := "100%")(
-          td(colspan := "2", textAlign := "center", paddingBottom := "10px")(
-            input(`type` := "checkbox", id := "newlineAttributes"),
-            label(`for` := "newlineAttributes", "Add properties on newline"),
-          )
-        ),
-        tr(width := "100%")(
-          td(colspan := "2", textAlign := "center")(
-            button(cls := "button -salmon center", onclick := { () => onConvertClicked(ReactScalaTagsConverter(isNewLineAttributes)) })("Convert to Scalajs-React's VDOM (1.0.0)"),
-            span("  "),
-            button(cls := "button -salmon center", onclick := { () => onConvertClicked(ScalaTagsConverter(isNewLineAttributes)) })("Convert to Scalatags (0.6.5)")
-          )
-        ),
-        tr(width := "100%")(
-          td(colspan := "2", textAlign := "center", paddingTop := "5px")(
-            a(cls := "github-button", href := "https://github.com/simerplaha/html-to-scalatags-converter", attr("data-icon") := "octicon-star", attr("data-size") := "large", attr("data-show-count") := "true", attr("aria-label") := "Star simerplaha/html-to-scalatags-converter on GitHub", "Star"),
+          td(width := "50%",
+            textArea(idAttr := "scalaTagsCode", cls := "boxsizingBorder", width := "100%", rows := 26, placeholder := "Scala code will be generated here.", value <-- signal.signal.map(converter))
           )
         )
       )
     )
+  }
 }

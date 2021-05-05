@@ -1,5 +1,7 @@
-# HTML to scalajs-react-scalatags and scalatags converter
+# HTML to laminar tags converter
 
-Convert HTML to ScalaTags and scalajs-react's version of ScalaTags.
+Convert HTML to Laminar tags
 
-Online converter: http://simerplaha.github.io/html-to-scalatags-converter/
+Online converter: todo
+
+Based on [Simer's converted](https://simerplaha.github.io/html-to-scalatags-converter). Check it out for scalatags/scala react converter.
