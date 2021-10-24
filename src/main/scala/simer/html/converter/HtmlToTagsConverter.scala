@@ -72,7 +72,7 @@ object HtmlToTagsConverter {
                          children: String,
                          nestingLevel: Int): String = {
 
-    val scalaAttrList = toScalaAttributes(attributes = node.attributes, converterType, nestingLevel+1)
+    val scalaAttrList = toScalaAttributes(attributes = node.attributes, converterType, nestingLevel + 1)
 
     val name = converterType.tagsRenames.get(node.nodeName.toLowerCase) match {
       case Some(value) => value
@@ -148,7 +148,9 @@ object HtmlToTagsConverter {
 
             case _ =>
               val name = s"${converterType.attributePrefix}$attrKey"
-              val upperCased = name.split("-").map(_.capitalize).mkString("-")
+              val upperCased =
+                if (name.contains("-")) name.split("-").map(_.capitalize).mkString("")
+                else name
               List(s"$upperCased := $escapedValue")
           }
           attrs.map(x => s"${pad(nestingLevel)}$x")
