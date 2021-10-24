@@ -147,7 +147,9 @@ object HtmlToTagsConverter {
               List(s"on$capitalized --> ???")
 
             case _ =>
-              List(s"${converterType.attributePrefix}$attrKey := $escapedValue")
+              val name = s"${converterType.attributePrefix}$attrKey"
+              val upperCased = name.split("-").map(_.capitalize).mkString("-")
+              List(s"$upperCased := $escapedValue")
           }
           attrs.map(x => s"${pad(nestingLevel)}$x")
       }
