@@ -72,7 +72,7 @@ object HtmlToTagsConverter {
                          children: String,
                          nestingLevel: Int): String = {
 
-    val scalaAttrList = toScalaAttributes(attributes = node.attributes, converterType, nestingLevel + 1)
+    val scalaAttrList = toScalaAttributes(attributes = node.attributes, converterType, node, nestingLevel + 1)
 
     val name = converterType.tagsRenames.get(node.nodeName.toLowerCase) match {
       case Some(value) => value
@@ -113,11 +113,28 @@ object HtmlToTagsConverter {
     }
   }
 
+  private def findNodeRec(node: Node)(f: Node => Boolean): Option[Node] = {
+    var parent = node
+    var res = Option.empty[Node]
+    while (parent != null) {
+      if (f(parent)) {
+        res = Some(parent)
+        return res
+      }
+
+      if (parent == node.parentNode) return res
+
+      parent = node.parentNode
+    }
+    res
+  }
+
   private def pad(level: Int) = List.fill(level * 2)(" ").mkString("")
 
   def toScalaAttributes(attributes: NamedNodeMap,
                         converterType: ConverterType,
-                        nestingLevel: Int): Iterable[String] =
+                        parentNode: Node,
+                        nestingLevel: Int): Iterable[String] = {
     if (js.isUndefined(attributes) || attributes.isEmpty)
       List.empty
     else
@@ -148,19 +165,35 @@ object HtmlToTagsConverter {
 
             case _ =>
               val name = s"${converterType.attributePrefix}$attrKey"
-              val upperCased =
-                if (name.contains("-")) {
-                  name.split("-").toList match {
-                    case Nil => ""
-                    case x :: Nil => x
-                    case x :: xs => (x :: xs.map(_.capitalize)).mkString("")
-                  }
-                }
-                else name
-              List(s"$upperCased := $escapedValue")
+              val upperCased = uppercaseAttr(name)
+              val prefixed = prefixAttr(upperCased, converterType, parentNode)
+              val renamed = converterType.wordReplace(prefixed)
+
+              List(s"$renamed := $escapedValue")
           }
           attrs.map(x => s"${pad(nestingLevel)}$x")
       }
+  }
+
+  def prefixAttr(name: String, converterType: ConverterType, parentNode: Node): String = {
+      val node = findNodeRec(parentNode)(x => converterType.nodeNamePrefixer.contains(x.nodeName.toLowerCase))
+      node match {
+        case Some(value) =>
+          val prefix = converterType.nodeNamePrefixer.getOrElse(value.nodeName.toLowerCase, "")
+          s"$prefix$name"
+        case None => name
+      }
+  }
+
+  def uppercaseAttr(name: String): String = {
+    if (name.contains("-")) {
+      name.split("-").toList match {
+          case Nil => ""
+          case x :: Nil => x
+          case x :: xs => (x :: xs.map(_.capitalize)).mkString("")
+        }
+      } else name
+  }
 
   /**
     * Javascript html parser seems to add <html>, <head> and <body> tags the parsed tree by default.
